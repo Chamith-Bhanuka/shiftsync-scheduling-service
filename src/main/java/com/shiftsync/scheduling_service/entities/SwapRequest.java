@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 @Getter
 public class SwapRequest {
-    public enum Status { PENDING, APPROVED, REJECTED }
+    public enum Status { PENDING, RESPONDED, APPROVED, REJECTED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,5 +33,9 @@ public class SwapRequest {
     private Status status;
 
     private LocalDateTime createdAt;
+
+    private String employeeResponse; // free-text comment from the target employee, nullable
+
+    private LocalDateTime respondedAt;
 
 }

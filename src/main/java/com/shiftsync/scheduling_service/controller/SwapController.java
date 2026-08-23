@@ -1,6 +1,8 @@
 package com.shiftsync.scheduling_service.controller;
 
 import com.shiftsync.scheduling_service.dto.SwapRequestCreateRequest;
+import com.shiftsync.scheduling_service.dto.SwapRequestResponse;
+import com.shiftsync.scheduling_service.dto.SwapResponseRequest;
 import com.shiftsync.scheduling_service.entities.Employee;
 import com.shiftsync.scheduling_service.entities.Shift;
 import com.shiftsync.scheduling_service.entities.SwapRequest;
@@ -11,6 +13,8 @@ import com.shiftsync.scheduling_service.service.SwapService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/swap-requests")
@@ -58,5 +62,26 @@ public class SwapController {
     @PutMapping("/{id}/reject")
     public SwapRequest reject(@PathVariable Long id) {
         return swapService.reject(id);
+    }
+
+    @PutMapping("/{id}/respond")
+    public SwapRequest respond(@PathVariable Long id, @RequestBody SwapResponseRequest response) {
+        return swapService.respond(id, response);
+    }
+
+    @GetMapping
+    public List<SwapRequestResponse> getSwapRequests(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long employeeId) {
+
+        List<SwapRequest> results;
+        if (status != null) {
+            results = swapRequestRepository.findByStatus(SwapRequest.Status.valueOf(status.toUpperCase()));
+        } else if (employeeId != null) {
+            results = swapRequestRepository.findByRequestingEmployeeIdOrTargetEmployeeId(employeeId, employeeId);
+        } else {
+            results = swapRequestRepository.findAll();
+        }
+        return results.stream().map(SwapRequestResponse::from).collect(Collectors.toList());
     }
 }
