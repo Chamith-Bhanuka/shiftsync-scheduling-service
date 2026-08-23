@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ShiftRepository extends JpaRepository<Shift, Long> {
     List<Shift> findByLocationId(Long locationId);
+    List<Shift> findByLocationIdAndEmployeeIsNotNull(Long locationId);
 }

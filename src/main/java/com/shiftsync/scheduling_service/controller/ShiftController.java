@@ -1,5 +1,6 @@
 package com.shiftsync.scheduling_service.controller;
 
+import com.shiftsync.scheduling_service.dto.ClaimShiftRequest;
 import com.shiftsync.scheduling_service.dto.ShiftRequest;
 import com.shiftsync.scheduling_service.dto.ShiftResponse;
 import com.shiftsync.scheduling_service.entities.Employee;
@@ -8,6 +9,7 @@ import com.shiftsync.scheduling_service.entities.Shift;
 import com.shiftsync.scheduling_service.repository.EmployeeRepository;
 import com.shiftsync.scheduling_service.repository.LocationRepository;
 import com.shiftsync.scheduling_service.repository.ShiftRepository;
+import com.shiftsync.scheduling_service.service.AvailabilityService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,11 +21,13 @@ public class ShiftController {
     private final ShiftRepository shiftRepository;
     private final LocationRepository locationRepository;
     private final EmployeeRepository employeeRepository;
+    private final AvailabilityService availabilityService;
 
-    public ShiftController(ShiftRepository shiftRepository, LocationRepository locationRepository, EmployeeRepository employeeRepository) {
+    public ShiftController(ShiftRepository shiftRepository, LocationRepository locationRepository, EmployeeRepository employeeRepository, AvailabilityService availabilityService) {
         this.shiftRepository = shiftRepository;
         this.locationRepository = locationRepository;
         this.employeeRepository = employeeRepository;
+        this.availabilityService = availabilityService;
     }
 
     @PostMapping
@@ -55,5 +59,30 @@ public class ShiftController {
                 .stream()
                 .map(ShiftResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @GetMapping("/{shiftId}/available-employees")
+    public List<Employee> getAvailableEmployees(@PathVariable Long shiftId) {
+        Shift shift = shiftRepository.findById(shiftId)
+                .orElseThrow(() -> new RuntimeException("Shift not found: " + shiftId));
+        return availabilityService.getAvailableEmployees(shift);
+    }
+
+    @PutMapping("/{shiftId}/claim")
+    public ShiftResponse claim(@PathVariable Long shiftId, @RequestBody ClaimShiftRequest request) {
+        Shift shift = shiftRepository.findById(shiftId)
+                .orElseThrow(() -> new RuntimeException("Shift not found: " + shiftId));
+
+        if (shift.getStatus() != Shift.Status.OPEN) {
+            throw new RuntimeException("This shift is not open — it may already be claimed or assigned.");
+        }
+
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new RuntimeException("Employee not found: " + request.getEmployeeId()));
+
+        shift.setEmployee(employee);
+        shift.setStatus(Shift.Status.SCHEDULED);
+        Shift saved = shiftRepository.save(shift);
+        return ShiftResponse.from(saved);
     }
 }
