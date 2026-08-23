@@ -8,6 +8,7 @@ import com.shiftsync.scheduling_service.repository.LocationRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/employees")
@@ -33,7 +34,18 @@ public class EmployeeController {
     }
 
     @GetMapping
-    public List<Employee> getByLocation(@RequestParam Long locationId) {
-        return employeeRepository.findByLocationId(locationId);
+    public List<Employee> getByLocation(@RequestParam Long locationId,
+                                        @RequestParam(required = false) String role) {
+
+        System.out.println("locationId = " + locationId);
+        System.out.println("role = " + role);
+
+        List<Employee> employees = employeeRepository.findByLocationId(locationId);
+        if (role != null) {
+            employees = employees.stream()
+                    .filter(e -> role.equalsIgnoreCase(e.getRole()))
+                    .collect(Collectors.toList());
+        }
+        return employees;
     }
 }
