@@ -16,6 +16,31 @@ public class NotificationClient {
         this.restTemplate = restTemplate;
     }
 
+    public void sendNotification(String userId, String message) {
+        try {
+            Map<String, Object> body = Map.of(
+                    "userId", userId,
+                    "message", message,
+                    "channel", "IN_APP"
+            );
+            restTemplate.postForObject("http://notification-service/notifications", body, Object.class);
+        } catch (Exception e) {
+            log.warn("Failed to create notification for userId={}: {}", userId, e.getMessage());
+        }
+    }
+
+    public void logSwapCreated(Long swapRequestId, Long shiftId,
+                               Long requestingEmployeeId, String requestingEmployeeName,
+                               Long targetEmployeeId, String targetEmployeeName) {
+        send("SWAP_CREATED", requestingEmployeeId, shiftId, Map.of(
+                "swapRequestId", swapRequestId,
+                "requestingEmployeeId", requestingEmployeeId,
+                "requestingEmployeeName", requestingEmployeeName,
+                "targetEmployeeId", targetEmployeeId != null ? targetEmployeeId : -1L,
+                "targetEmployeeName", targetEmployeeName != null ? targetEmployeeName : ""
+        ));
+    }
+
     public void logSwapApproved(Long swapRequestId, Long shiftId,
                                 Long requestingEmployeeId, String requestingEmployeeName,
                                 Long targetEmployeeId, String targetEmployeeName) {
@@ -23,8 +48,8 @@ public class NotificationClient {
                 "swapRequestId", swapRequestId,
                 "requestingEmployeeId", requestingEmployeeId,
                 "requestingEmployeeName", requestingEmployeeName,
-                "targetEmployeeId", targetEmployeeId,
-                "targetEmployeeName", targetEmployeeName
+                "targetEmployeeId", targetEmployeeId != null ? targetEmployeeId : -1L,
+                "targetEmployeeName", targetEmployeeName != null ? targetEmployeeName : ""
         ));
     }
 
@@ -35,23 +60,9 @@ public class NotificationClient {
                 "swapRequestId", swapRequestId,
                 "requestingEmployeeId", requestingEmployeeId,
                 "requestingEmployeeName", requestingEmployeeName,
-                "targetEmployeeId", targetEmployeeId,
-                "targetEmployeeName", targetEmployeeName
+                "targetEmployeeId", targetEmployeeId != null ? targetEmployeeId : -1L,
+                "targetEmployeeName", targetEmployeeName != null ? targetEmployeeName : ""
         ));
-    }
-
-    private void send(String eventType, Long actorId, Long shiftId, Map<String, Object> metadata) {
-        try {
-            Map<String, Object> body = Map.of(
-                    "eventType", eventType,
-                    "actorId", String.valueOf(actorId),
-                    "shiftId", String.valueOf(shiftId),
-                    "metadata", metadata
-            );
-            restTemplate.postForObject("http://notification-service/events", body, Object.class);
-        } catch (Exception e) {
-            log.warn("Failed to notify notification-service of {} for shiftId={}: {}", eventType, shiftId, e.getMessage());
-        }
     }
 
     public void logSwapResponse(Long swapRequestId, Long shiftId,
@@ -79,6 +90,20 @@ public class NotificationClient {
         } catch (Exception e) {
             log.warn("Failed to notify notification-service of swap response for swapRequestId={}: {}",
                     swapRequestId, e.getMessage());
+        }
+    }
+
+    private void send(String eventType, Long actorId, Long shiftId, Map<String, Object> metadata) {
+        try {
+            Map<String, Object> body = Map.of(
+                    "eventType", eventType,
+                    "actorId", String.valueOf(actorId),
+                    "shiftId", String.valueOf(shiftId),
+                    "metadata", metadata
+            );
+            restTemplate.postForObject("http://notification-service/events", body, Object.class);
+        } catch (Exception e) {
+            log.warn("Failed to notify notification-service of {} for shiftId={}: {}", eventType, shiftId, e.getMessage());
         }
     }
 }

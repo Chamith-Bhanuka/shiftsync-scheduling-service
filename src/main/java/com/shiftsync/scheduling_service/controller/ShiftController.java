@@ -1,5 +1,6 @@
 package com.shiftsync.scheduling_service.controller;
 
+import com.shiftsync.scheduling_service.client.NotificationClient;
 import com.shiftsync.scheduling_service.dto.ClaimShiftRequest;
 import com.shiftsync.scheduling_service.dto.ShiftRequest;
 import com.shiftsync.scheduling_service.dto.ShiftResponse;
@@ -22,12 +23,18 @@ public class ShiftController {
     private final LocationRepository locationRepository;
     private final EmployeeRepository employeeRepository;
     private final AvailabilityService availabilityService;
+    private final NotificationClient notificationClient;
 
-    public ShiftController(ShiftRepository shiftRepository, LocationRepository locationRepository, EmployeeRepository employeeRepository, AvailabilityService availabilityService) {
+    public ShiftController(ShiftRepository shiftRepository,
+                           LocationRepository locationRepository,
+                           EmployeeRepository employeeRepository,
+                           AvailabilityService availabilityService,
+                           NotificationClient notificationClient) {
         this.shiftRepository = shiftRepository;
         this.locationRepository = locationRepository;
         this.employeeRepository = employeeRepository;
         this.availabilityService = availabilityService;
+        this.notificationClient = notificationClient;
     }
 
     @PostMapping
@@ -50,6 +57,14 @@ public class ShiftController {
         }
 
         Shift saved = shiftRepository.save(shift);
+
+        if (request.getEmployeeId() != null) {
+            notificationClient.sendNotification(
+                    String.valueOf(request.getEmployeeId()),
+                    "You have been assigned a new shift (Shift #" + saved.getId() + ") starting on " + saved.getStartTime().toLocalDate() + "."
+            );
+        }
+
         return ShiftResponse.from(saved);
     }
 
@@ -83,6 +98,17 @@ public class ShiftController {
         shift.setEmployee(employee);
         shift.setStatus(Shift.Status.SCHEDULED);
         Shift saved = shiftRepository.save(shift);
+
+        notificationClient.sendNotification(
+                String.valueOf(employee.getId()),
+                "You successfully claimed open shift #" + shiftId + "."
+        );
+
+        notificationClient.sendNotification(
+                "1",
+                employee.getName() + " claimed open shift #" + shiftId + "."
+        );
+
         return ShiftResponse.from(saved);
     }
 }

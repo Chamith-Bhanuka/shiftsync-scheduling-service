@@ -29,9 +29,11 @@ public class SwapService {
                 .orElseThrow(() -> new RuntimeException("Swap request not found"));
 
         Shift shift = request.getShift();
-        shift.setEmployee(request.getTargetEmployee());
-        shift.setStatus(Shift.Status.COVERED);
-        shiftRepository.save(shift);
+        if (request.getTargetEmployee() != null) {
+            shift.setEmployee(request.getTargetEmployee());
+            shift.setStatus(Shift.Status.COVERED);
+            shiftRepository.save(shift);
+        }
 
         request.setStatus(SwapRequest.Status.APPROVED);
         SwapRequest saved = swapRequestRepository.save(request);
@@ -39,7 +41,8 @@ public class SwapService {
         notificationClient.logSwapApproved(
                 saved.getId(), shift.getId(),
                 request.getRequestingEmployee().getId(), request.getRequestingEmployee().getName(),
-                request.getTargetEmployee().getId(), request.getTargetEmployee().getName()
+                request.getTargetEmployee() != null ? request.getTargetEmployee().getId() : null,
+                request.getTargetEmployee() != null ? request.getTargetEmployee().getName() : null
         );
 
         return saved;
@@ -54,7 +57,8 @@ public class SwapService {
         notificationClient.logSwapRejected(
                 saved.getId(), request.getShift().getId(),
                 request.getRequestingEmployee().getId(), request.getRequestingEmployee().getName(),
-                request.getTargetEmployee().getId(), request.getTargetEmployee().getName()
+                request.getTargetEmployee() != null ? request.getTargetEmployee().getId() : null,
+                request.getTargetEmployee() != null ? request.getTargetEmployee().getName() : null
         );
 
         return saved;
@@ -64,7 +68,7 @@ public class SwapService {
         SwapRequest request = swapRequestRepository.findById(swapRequestId)
                 .orElseThrow(() -> new RuntimeException("Swap request not found"));
 
-        if (!request.getTargetEmployee().getId().equals(response.getEmployeeId())) {
+        if (request.getTargetEmployee() != null && !request.getTargetEmployee().getId().equals(response.getEmployeeId())) {
             throw new RuntimeException("Only the target employee of this swap request can respond to it");
         }
 
@@ -77,7 +81,8 @@ public class SwapService {
         notificationClient.logSwapResponse(
                 saved.getId(), saved.getShift().getId(),
                 request.getRequestingEmployee().getId(), request.getRequestingEmployee().getName(),
-                request.getTargetEmployee().getId(), request.getTargetEmployee().getName(),
+                request.getTargetEmployee() != null ? request.getTargetEmployee().getId() : response.getEmployeeId(),
+                request.getTargetEmployee() != null ? request.getTargetEmployee().getName() : "Staff Member",
                 response.isWillingToCover(), response.getComment(),
                 request.getShift().getLocation().getId()
         );
